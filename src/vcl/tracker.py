@@ -87,26 +87,3 @@ class VehicleTracker:
         
         self.frame_count += 1
         return matched_vehicles
-    
-    def get_lane_speeds(self):
-        """Calcula velocidade média por faixa (baseado na posição Y)."""
-        lane_bins = {}
-        
-        for vehicle in self.vehicles.values():
-            # Determinar faixa baseado na posição Y do centróide
-            lane = int(vehicle.centroid[1] // 50)  # Cada 50 pixels é uma faixa
-            
-            if lane not in lane_bins:
-                lane_bins[lane] = []
-            
-            if vehicle.estimated_speed > 0:  # Ignorar veículos parados
-                lane_bins[lane].append(vehicle.estimated_speed)
-        
-        # Calcular médias
-        avg_speeds = {}
-        for lane, speeds in lane_bins.items():
-            if speeds:
-                avg_speeds[lane] = sum(speeds) / len(speeds)
-        
-        self.lane_speeds = avg_speeds
-        return avg_speeds

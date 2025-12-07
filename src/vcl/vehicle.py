@@ -12,7 +12,6 @@ class Vehicle:
     centroid: Tuple[int, int]        # (cx, cy)
     frame_id: int                    # Frame de primeira deteção
     
-    # Atributos com valores padrão
     id: str = field(default_factory=lambda: str(uuid.uuid4())[:8])
     trail: Deque[Tuple[int, int]] = field(default_factory=lambda: deque(maxlen=10))
     first_seen: int = field(init=False)
@@ -34,7 +33,7 @@ class Vehicle:
         self.first_seen = self.frame_id
         self.last_seen = self.frame_id
     
-    def update(self, bbox: Tuple[int, int, int, int], centroid: Tuple[int, int], frame_id: int):
+    def update(self, bbox, centroid, frame_id):
         """
         Atualiza o estado do veículo.
         Args:
@@ -47,10 +46,16 @@ class Vehicle:
         self.trail.append(centroid)
         self.last_seen = frame_id
     
-    def speed(self, new_centroid: Tuple[int, int], 
-                       fps: float, 
-                       scale_factor: float = 1.0) -> float:
-        """Calcula velocidade baseada no deslocamento do centróide."""
+    def speed(self, new_centroid, fps, scale_factor):
+        """
+        Calcula velocidade baseada no deslocamento do centróide.
+        Args:
+            new_centroid (Tuple[int, int]) : Novo centróide.
+            fps (float) : Frames por segundo do vídeo.
+            scale_factor (float) : Metros por pixel (calibração).
+        Returns:
+            float : Velocidade estimada em km/h.
+        """
         if len(self.trail) < 2:
             return 0.0
         

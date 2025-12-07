@@ -6,10 +6,7 @@ from utils import iou, centroid_from_bbox
 import logging
 
 class VehicleTracker:
-    """Associa detecções a tracks usando IOU greedy matching.
-
-    Limitações: método simples mas eficiente, sem dependências externas.
-    """
+    """Associa detecções a tracks usando IOU greedy matching."""
     def __init__(self, iou_threshold = 0.3, max_missing = 5):
         """
         Args:
@@ -20,8 +17,15 @@ class VehicleTracker:
         self.iou_threshold = iou_threshold
         self.max_missing = max_missing
 
-    def update(self, detections: List[Tuple[int,int,int,int]], frame_id: int,
-               fps: float, scale_m_per_px: float):
+    def update(self, detections, frame_id, fps, scale_m_per_px):
+        """
+        Atualiza as tracks com base nas detecções fornecidas.
+        Args:
+            detections (List[Tuple[int,int,int,int]]) : Lista de bounding boxes (x,y,w,h) das detecções.
+            frame_id (int) : Número de frame do frame atual.
+            fps (float) : Frames por segundo do vídeo.
+            scale_m_per_px (float) : Escala de "metros por pixel" do vídeo.
+        """
         # detections are bboxes in the same coord space as tracks
         assigned_tracks = set()
         assigned_dets = set()
@@ -89,21 +93,3 @@ class VehicleTracker:
             new_v = Vehicle(bbox=bbox, centroid=centroid, frame_id=frame_id)
             new_v.compute_speed(centroid, fps, scale_m_per_px)
             self.tracks[new_v.id] = new_v
-
-    def draw_tracks(self, frame: np.ndarray, offset=(0,0)) -> np.ndarray:
-        # offset is used when working with cropped ROI to draw back in full frame coords
-        annotated = frame.copy()
-        ox, oy = offset
-        for tid, tr in self.tracks.items():
-            x,y,w,h = tr.bbox
-            x += ox; y += oy
-            cv.rectangle(annotated, (x,y), (x+w, y+h), tr.color, 2)
-            cx, cy = tr.centroid
-            cv.circle(annotated, (cx+ox, cy+oy), 3, tr.color, -1)
-            cv.putText(annotated, f"{tid[:6]} {int(tr.estimated_speed)}km/h",
-                       (x, y-6), cv.FONT_HERSHEY_SIMPLEX, 0.5, tr.color, 1)
-            # draw trail
-            pts = list(tr.trail)
-            for i in range(1, len(pts)):
-                cv.line(annotated, (pts[i-1][0]+ox, pts[i-1][1]+oy), (pts[i][0]+ox, pts[i][1]+oy), tr.color, 2)
-        return annotated

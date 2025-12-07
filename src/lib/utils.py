@@ -1,4 +1,12 @@
 def iou(boxA, boxB):
+    """
+    Calcula a interseção sobre união (iou) de duas bounding boxes
+    Args:
+        boxA (Tuple[float,float,float,float]) : (x,y,w,h) do primeiro bounding box
+        boxB (Tuple[float,float,float,float]) : (x,y,w,h) do segundo bounding box
+    Returns:
+        float : interseção sobre união das duas bounding boxes
+    """
     # box: (x,y,w,h)
     xA = max(boxA[0], boxB[0])
     yA = max(boxA[1], boxB[1])
@@ -18,5 +26,12 @@ def iou(boxA, boxB):
     return interArea / denom
 
 def centroid_from_bbox(bbox):
+    """
+    Calcula o centro de uma bounding box
+    Args:
+        bbox (Tuple[float,float,float,float]) : (x,y,w,h) da bounding box
+    Returns:
+        Tuple[int,int] : (xc,yc) do centro da bounding box          
+    """
     x, y, w, h = bbox
     return (int(x + w/2), int(y + h/2))

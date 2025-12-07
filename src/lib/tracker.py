@@ -1,9 +1,5 @@
-from typing import List, Tuple, Dict
-import cv2 as cv
 from lib.vehicle import Vehicle
-import numpy as np
 from utils import iou, centroid_from_bbox
-import logging
 
 class VehicleTracker:
     """Associa detecções a tracks usando IOU greedy matching."""
@@ -13,7 +9,7 @@ class VehicleTracker:
             iou_threshold (float): IOU threshold for matching detections to tracks. Defaults to 0.3.
             max_missing (int): Maximum number of frames a track can be missing before being removed. Defaults to 5.
         """
-        self.tracks: Dict[str, Vehicle] = {}
+        self.tracks = {} 
         self.iou_threshold = iou_threshold
         self.max_missing = max_missing
 
@@ -26,22 +22,20 @@ class VehicleTracker:
             fps (float) : Frames por segundo do vídeo.
             scale_m_per_px (float) : Escala de "metros por pixel" do vídeo.
         """
-        # detections are bboxes in the same coord space as tracks
+        # 'Detections' são bounding boxes no mesmo espaço de coordenadas das 'tracks'
         assigned_tracks = set()
         assigned_dets = set()
 
         det_centroids = [centroid_from_bbox(b) for b in detections]
+        track_items = list(self.tracks.items())  # Lista de tracks existentes
 
-        # Build list of existing track bboxes
-        track_items = list(self.tracks.items())  # list of (id, Vehicle)
-
-        # Compute IOU matrix
+        # Calcula matriz de IOU
         iou_matrix = []
         for tid, tr in track_items:
             row = [iou(tr.bbox, d) for d in detections]
             iou_matrix.append(row)
 
-        # Greedy matching: find best IOU pairs iteratively
+        # Greedy matching: encontra pares de melhor IOU iterativamente
         matches = []  # list of (track_idx, det_idx)
         used_tracks = set()
         used_dets = set()
@@ -64,7 +58,7 @@ class VehicleTracker:
             used_dets.add(di)
             matches.append((ti, di))
 
-        # Update matched tracks
+        # Atualiza tracks e detecções coicidentes
         for ti, di in matches:
             tid, tr = track_items[ti]
             bbox = detections[di]
@@ -74,18 +68,17 @@ class VehicleTracker:
             assigned_tracks.add(tid)
             assigned_dets.add(di)
 
-        # Mark unmatched tracks as missed
+        # Marcar tracks que faltam
         unmatched_tracks = [ (tid, tr) for idx, (tid,tr) in enumerate(track_items) if idx not in used_tracks ]
         for tid, tr in unmatched_tracks:
             tr.mark_missed()
 
-        # Remove tracks missing for too long
+        # Remover tracks que faltam
         to_delete = [tid for tid, tr in self.tracks.items() if tr.missing_frames > self.max_missing]
         for tid in to_delete:
-            logging.debug(f"Removing track {tid} after {self.tracks[tid].missing_frames} missing frames")
             del self.tracks[tid]
 
-        # Create new tracks for unmatched detections
+        # Criar novos tracks para detecções não coicidentes
         for di, bbox in enumerate(detections):
             if di in used_dets:
                 continue

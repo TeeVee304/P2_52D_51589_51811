@@ -3,7 +3,6 @@ from lib.motion import MotionDetector
 from lib.tracker import VehicleTracker
 import cv2 as cv
 import numpy as np
-from typing import Tuple, Optional
 
 class Pipeline:
     def __init__(self, input_path, output_path, roi_polygon = None, m_per_px = 0.02, min_area = 500):

@@ -1,5 +1,5 @@
-from lib.vehicle import Vehicle
-from utils import iou, centroid_from_bbox
+from .vehicle import Vehicle
+from .utils import iou, centroid_from_bbox
 
 class VehicleTracker:
     """Associa detecções a tracks usando IOU greedy matching."""

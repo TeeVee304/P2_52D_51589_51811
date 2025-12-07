@@ -61,13 +61,18 @@ class MotionDetector:
         """
         return [cv.boundingRect(cnt) for cnt in contours]
 
-    def detect(self, frame):
+    def detect(self, frame, roi_mask=None):
         """
         Detecta regiões de movimento em um único frame.
         Retorna contornos e bounding boxes.
         """
         gray = self._subtract_background(frame)
         binary = self._threshold_image(gray)
+
+        # Se existir máscara da ROI, aplica
+        if roi_mask is not None:
+            binary = cv2.bitwise_and(binary, binary, mask=roi_mask)
+
         contours = self._find_contours(binary)
         bboxes = self._get_bounding_boxes(contours)
-        return {'contours': contours, 'bboxes': bboxes, 'binary': binary}
+        return {'contours': contours, 'bboxes': bboxes}, binary

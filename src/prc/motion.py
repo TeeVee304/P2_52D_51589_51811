@@ -263,7 +263,7 @@ class MotionDetector:
         
         # Desenhar polígono ROI
         if self.roi_polygon is not None:
-            cv.polylines(annotated, [self.roi_polygon], True, (255, 0, 0), 2)
+            cv.polylines(annotated, [self.roi_polygon], True, (0, 255, 0), 2)
         
         # Desenhar bounding boxes
         for bbox in results.get('bboxes', []):

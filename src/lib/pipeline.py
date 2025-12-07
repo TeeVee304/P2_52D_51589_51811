@@ -1,4 +1,4 @@
-from lib.background import BackgroundExtractor
+from lib.background import background
 from lib.motion import MotionDetector
 from lib.tracker import VehicleTracker
 import cv2 as cv
@@ -15,7 +15,6 @@ class Pipeline:
         self.scale_m_per_px = scale_m_per_px
         self.min_area = min_area
 
-        self.bg_extractor = BackgroundExtractor()
         self.background = None
         self.detector = None
         self.tracker = VehicleTracker(iou_threshold=0.25, max_missing=8)
@@ -39,14 +38,11 @@ class Pipeline:
         fps = cap.get(cv.CAP_PROP_FPS)
         if fps <= 0:
             fps = 25.0
-            logging.warning("FPS inválido detectado; usando 25")
+            print("FPS inválido detectado; usando 25")
 
         # 1) Background
-        logging.info("Construindo background...")
-        if mode == 'median':
-            bg = self.bg_extractor.build_median_background(self.input_path)
-        else:
-            bg = self.bg_extractor.build_mog2_background(self.input_path)
+        print("Construindo background...")
+        bg = background(self.input_path)
         self.background = bg
         self.detector = MotionDetector(background=self.background, min_area=self.min_area)
 
@@ -101,10 +97,10 @@ class Pipeline:
             # show preview (non-blocking)
             cv.imshow('Pipeline', annotated)
             if cv.waitKey(1) & 0xFF == 27:
-                logging.info('Interrompido pelo usuário')
+                print('Interrompido pelo usuário')
                 break
 
         cap.release()
         out.release()
         cv.destroyAllWindows()
-        logging.info('Processamento terminado')
+        print('Processamento terminado')

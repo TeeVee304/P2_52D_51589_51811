@@ -27,7 +27,7 @@ import numpy as np
 import uuid
 import math
 import argparse
-import logging
+# logging removido para Jupyter
 import sys
 
 # ------------------------ Utilitários ------------------------
@@ -279,7 +279,7 @@ class VehicleTracker:
         # Remove tracks missing for too long
         to_delete = [tid for tid, tr in self.tracks.items() if tr.missing_frames > self.max_missing]
         for tid in to_delete:
-            logging.debug(f"Removing track {tid} after {self.tracks[tid].missing_frames} missing frames")
+            print(f"Removing track {tid} after {self.tracks[tid].missing_frames} missing frames")
             del self.tracks[tid]
 
         # Create new tracks for unmatched detections
@@ -344,10 +344,10 @@ class Pipeline:
         fps = cap.get(cv.CAP_PROP_FPS)
         if fps <= 0:
             fps = 25.0
-            logging.warning("FPS inválido detectado; usando 25")
+            print("FPS inválido detectado; usando 25")
 
         # 1) Background
-        logging.info("Construindo background...")
+        print("Construindo background...")
         if mode == 'median':
             bg = self.bg_extractor.build_median_background(self.input_path)
         else:
@@ -406,13 +406,13 @@ class Pipeline:
             # show preview (non-blocking)
             cv.imshow('Pipeline', annotated)
             if cv.waitKey(1) & 0xFF == 27:
-                logging.info('Interrompido pelo usuário')
+                print('Interrompido pelo usuário')
                 break
 
         cap.release()
         out.release()
         cv.destroyAllWindows()
-        logging.info('Processamento terminado')
+        print('Processamento terminado')
 
 # ------------------------ CLI ------------------------
 
@@ -436,7 +436,7 @@ def main():
     parser.add_argument('--min_area', type=int, default=500)
     args = parser.parse_args()
 
-    logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')
+    print(level=print, format='%(asctime)s %(levelname)s %(message)s')
 
     if args.roi:
         roi_poly = parse_roi(args.roi)

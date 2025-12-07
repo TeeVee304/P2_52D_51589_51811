@@ -25,8 +25,15 @@ class Pipeline:
         self.detector = None
         self.tracker = VehicleTracker(iou_threshold=0.25, max_missing=8)
 
-    def compute_roi_bbox(self, polygon: np.ndarray, frame_shape: Tuple[int,int]) -> Tuple[int,int,int,int]:
-        # polygon: Nx2
+    def _compute_roi_bbox(self, polygon, frame_shape):
+        """
+        Calcula a bounding box de uma ROI definida por um polígono.
+        Args:
+            polygon (np.ndarray): Polígono que define a ROI, formato Nx2.
+            frame_shape (Tuple[int,int]): Dimensões do frame, formato (height, width).
+        Returns:
+            Tuple[int,int,int,int]: Bounding box da ROI, formato (x1, y1, width, height).
+        """
         xs = polygon[:,0]
         ys = polygon[:,1]
         x1 = int(max(0, xs.min()))
@@ -35,7 +42,21 @@ class Pipeline:
         y2 = int(min(frame_shape[0]-1, ys.max()))
         return (x1, y1, x2-x1, y2-y1)
 
-    def run(self, mode: str = 'median'):
+    def run(self):
+        """
+        Executa o pipeline de detecção de veículos.
+
+        O pipeline é composto por 3 etapas:
+
+        1. Background: constrói uma imagem de fundo para o vídeo.
+        2. ROI bbox: calcula uma bounding box para a ROI, se fornecida.
+        3. Video writer: escreve o vídeo processado em um arquivo.
+
+        Durante a execução, o pipeline também exibe uma prévia do vídeo processado em uma janela.
+
+        Raises:
+            RuntimeError: se o vídeo de entrada não puder ser aberto.
+        """
         cap = cv.VideoCapture(self.input_path)
         if not cap.isOpened():
             raise RuntimeError(f"Erro a abrir {self.input_path}")
@@ -56,7 +77,7 @@ class Pipeline:
         roi_bbox = None
         roi_mask_full = None
         if self.roi_polygon is not None:
-            roi_bbox = self.compute_roi_bbox(self.roi_polygon, (h,w))
+            roi_bbox = self._compute_roi_bbox(self.roi_polygon, (h,w))
             # create mask for cropped ROI
             roi_mask_full = np.zeros((h,w), dtype=np.uint8)
             cv.fillPoly(roi_mask_full, [self.roi_polygon], 255)

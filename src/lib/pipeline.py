@@ -68,9 +68,9 @@ class Pipeline:
 
         # 1) Background
         print("Construindo background...")
-        bg = background(self.input_path)
-        self.background = bg
-        self.detector = MotionDetector(background=self.background, min_area=self.min_area)
+        self.background = background(self.input_path)
+        self.detector = MotionDetector(min_area=self.min_area, roi_polygon=self.roi_polygon)
+        self.detector.background = self.background
 
         # 2) ROI bbox
         roi_bbox = None

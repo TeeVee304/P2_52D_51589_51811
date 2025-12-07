@@ -102,9 +102,7 @@ class Pipeline:
                 cropped = frame
                 roi_mask = None
 
-            result = self.detector.detect(cropped)
-            detections = {'contours': result['contours'], 'bboxes': result['bboxes']}
-            binary = result['binary']
+            detections = self.detector.detect(frame)
             
             # convert detections coords back to full frame
             if roi_bbox is not None:

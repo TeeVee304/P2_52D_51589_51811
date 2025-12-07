@@ -4,7 +4,6 @@ Inclui subtração de fundo, limiarização e operações morfológicas.
 """
 import cv2 as cv
 import numpy as np
-from typing import List, Tuple, Optional, Dict, Any
 import matplotlib.pyplot as plt
 
 class MotionDetector:
@@ -250,7 +249,7 @@ class MotionDetector:
         
         return results
     
-    def visualize_detection(self, frame: np.ndarray, results: Dict[str, Any]) -> np.ndarray:
+    def visualize_detection(self, frame, results):
         """
         Visualiza os resultados da detecção no frame original.
         Args:
@@ -263,7 +262,7 @@ class MotionDetector:
         
         # Desenhar polígono ROI
         if self.roi_polygon is not None:
-            cv.polylines(annotated, [self.roi_polygon], True, (0, 255, 0), 2)
+            cv.polylines(annotated, [self.roi_polygon], True, (255, 0, 0), 2)
         
         # Desenhar bounding boxes
         for bbox in results.get('bboxes', []):

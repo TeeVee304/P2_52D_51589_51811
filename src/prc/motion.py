@@ -23,10 +23,10 @@ class MotionDetector:
         self.threshold = threshold
         self.min_area = min_area
         self.roi_polygon = roi_polygon
-        self.roi_mask = None
+        self._roi_mask = None
         
         # Configurar kernel morfológico
-        self.kernel = cv.getStructuringElement(cv.MORPH_ELLIPSE, (5, 5))
+        self._kernel = cv.getStructuringElement(cv.MORPH_ELLIPSE, (5, 5))
         
         # Inicializar máscara ROI se polígono fornecido
         if roi_polygon is not None:
@@ -36,8 +36,8 @@ class MotionDetector:
         """Cria máscara binária para a região de interesse."""
         h, w = self.background.shape[:2]
         
-        self.roi_mask = np.zeros((h, w), dtype=np.uint8)
-        cv.fillPoly(self.roi_mask, [self.roi_polygon], 255)
+        self._roi_mask = np.zeros((h, w), dtype=np.uint8)
+        cv.fillPoly(self._roi_mask, [self.roi_polygon], 255)
     
     def subtract_background(self, frame: np.ndarray) -> np.ndarray:
         """
@@ -62,16 +62,16 @@ class MotionDetector:
         Returns:
             Imagem com ROI aplicada.
         """
-        if self.roi_mask is None:
+        if self._roi_mask is None:
             return image
         
         # Garantir que a máscara tem as mesmas dimensões
         if len(image.shape) == 3:
             # Para imagens coloridas, aplicar máscara a cada canal
-            masked = cv.bitwise_and(image, image, mask=self.roi_mask)
+            masked = cv.bitwise_and(image, image, mask=self._roi_mask)
         else:
             # Para imagens em escala de cinza
-            masked = cv.bitwise_and(image, self.roi_mask)
+            masked = cv.bitwise_and(image, self._roi_mask)
         
         return masked
     
@@ -127,16 +127,16 @@ class MotionDetector:
         for op in operations:
             if op == 'close':
                 # Fechamento (preenche buracos)
-                processed = cv.morphologyEx(processed, cv.MORPH_CLOSE, self.kernel, iterations=2)
+                processed = cv.morphologyEx(processed, cv.MORPH_CLOSE, self._kernel, iterations=2)
             elif op == 'open':
                 # Abertura (remove ruído)
-                processed = cv.morphologyEx(processed, cv.MORPH_OPEN, self.kernel, iterations=2)
+                processed = cv.morphologyEx(processed, cv.MORPH_OPEN, self._kernel, iterations=2)
             elif op == 'dilate':
                 # Dilatação
-                processed = cv.dilate(processed, self.kernel, iterations=1)
+                processed = cv.dilate(processed, self._kernel, iterations=1)
             elif op == 'erode':
                 # Erosão
-                processed = cv.erode(processed, self.kernel, iterations=1)
+                processed = cv.erode(processed, self._kernel, iterations=1)
         
         return processed
     

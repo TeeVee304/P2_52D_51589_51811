@@ -2,29 +2,22 @@
 Módulo para detecção de movimento e processamento de regiões ativas.
 Inclui subtração de fundo, limiarização e operações morfológicas.
 """
-
 import cv2 as cv
 import numpy as np
 from typing import List, Tuple, Optional, Dict, Any
 import matplotlib.pyplot as plt
 
-
 class MotionDetector:
     """Classe para detecção e processamento de movimento."""
-    
-    def __init__(self, 
-                 background: Optional[np.ndarray] = None,
-                 threshold: int = 30,
-                 min_area: int = 500,
-                 roi_polygon: Optional[np.ndarray] = None):
+    def __init__(self, background, threshold, min_area, roi_polygon):
         """
         Inicializa o detetor de movimento.
         
         Args:
-            background: Imagem de fundo (se None, será calculada).
-            threshold: Limiar para binarização.
-            min_area: Área mínima para considerar uma região como veículo.
-            roi_polygon: Polígono da região de interesse.
+            background (np.ndarray):   Imagem de fundo (se None, será calculada).
+            threshold (int) :          Limiar para binarização.
+            min_area (int) :           Área mínima para considerar uma região como veículo.
+            roi_polygon (np.ndarray) : Polígono da região de interesse.
         """
         self.background = background
         self.threshold = threshold
@@ -39,33 +32,12 @@ class MotionDetector:
         if roi_polygon is not None:
             self._create_roi_mask()
     
-    def _create_roi_mask(self, frame_shape: Optional[Tuple[int, int]] = None):
+    def _create_roi_mask(self):
         """Cria máscara binária para a região de interesse."""
-        if self.roi_polygon is None:
-            self.roi_mask = None
-            return
-            
-        if frame_shape is None:
-            if self.background is not None:
-                h, w = self.background.shape[:2]
-            else:
-                raise ValueError("Forneça frame_shape ou background para criar máscara ROI.")
-        else:
-            h, w = frame_shape[:2] if len(frame_shape) == 3 else frame_shape
+        h, w = self.background.shape[:2]
         
         self.roi_mask = np.zeros((h, w), dtype=np.uint8)
         cv.fillPoly(self.roi_mask, [self.roi_polygon], 255)
-    
-    def set_roi_polygon(self, polygon: np.ndarray, frame_shape: Optional[Tuple[int, int]] = None):
-        """
-        Define um novo polígono de ROI.
-        
-        Args:
-            polygon: Array Nx2 com vértices do polígono.
-            frame_shape: Formato do frame (altura, largura).
-        """
-        self.roi_polygon = polygon.astype(np.int32)
-        self._create_roi_mask(frame_shape)
     
     def subtract_background(self, frame: np.ndarray) -> np.ndarray:
         """
@@ -73,17 +45,10 @@ class MotionDetector:
         
         Args:
             frame: Frame atual (BGR).
-            
         Returns:
             Diferença absoluta em escala de cinza.
         """
-        if self.background is None:
-            raise ValueError("Background não definido. Chame set_background() primeiro.")
-        
-        # Calcular diferença absoluta
         diff = cv.absdiff(frame, self.background)
-        
-        # Converter para escala de cinza
         gray = cv.cvtColor(diff, cv.COLOR_BGR2GRAY)
         
         return gray
@@ -94,7 +59,6 @@ class MotionDetector:
         
         Args:
             image: Imagem de entrada.
-            
         Returns:
             Imagem com ROI aplicada.
         """
@@ -269,14 +233,6 @@ class MotionDetector:
         
         return results
     
-    def set_background(self, background: np.ndarray):
-        """Define a imagem de fundo."""
-        self.background = background
-        
-        # Atualizar máscara ROI se necessário
-        if self.roi_polygon is not None:
-            self._create_roi_mask(background.shape[:2])
-    
     def visualize_detection(self, frame: np.ndarray, results: Dict[str, Any]) -> np.ndarray:
         """
         Visualiza os resultados da detecção no frame original.
@@ -305,80 +261,3 @@ class MotionDetector:
             cv.circle(annotated, (cx, cy), 5, (0, 0, 255), -1)
         
         return annotated
-
-
-# Função de conveniência (mantém compatibilidade)
-def detect_cars_polygon(video_path: str, output_path: str, roi_polygon: np.ndarray) -> None:
-    """
-    Detecta e marca veículos dentro de uma ROI poligonal num vídeo.
-    
-    Args:
-        video_path: Caminho para o ficheiro de vídeo de entrada.
-        output_path: Caminho para o ficheiro de vídeo de saída (mp4).
-        roi_polygon: Array Nx2 com vértices do polígono da ROI.
-    """
-    # Calcular fundo
-    background = avg_frame(video_path)
-    
-    # Inicializar detetor
-    detector = MotionDetector(
-        background=background,
-        threshold=30,
-        min_area=500,
-        roi_polygon=roi_polygon
-    )
-    
-    # Abrir vídeo
-    cap = cv.VideoCapture(video_path)
-    
-    # Obter propriedades do vídeo
-    w = int(cap.get(cv.CAP_PROP_FRAME_WIDTH))
-    h = int(cap.get(cv.CAP_PROP_FRAME_HEIGHT))
-    fps = cap.get(cv.CAP_PROP_FPS)
-    
-    # Criar VideoWriter
-    out = cv.VideoWriter(
-        output_path,
-        cv.VideoWriter_fourcc(*"mp4v"),
-        fps, (w, h)
-    )
-    
-    print(f"Processando vídeo: {video_path}")
-    print(f"Resolução: {w}x{h}, FPS: {fps}")
-    
-    frame_count = 0
-    
-    while True:
-        ret, frame = cap.read()
-        if not ret:
-            break
-        
-        # Detetar regiões de movimento
-        results = detector.detect_motion_regions(frame)
-        
-        # Visualizar resultados
-        annotated_frame = detector.visualize_detection(frame, results)
-        
-        # Escrever frame processado
-        out.write(annotated_frame)
-        
-        # Mostrar preview
-        cv.imshow("Car Detection", annotated_frame)
-        
-        # Contar frames processados
-        frame_count += 1
-        if frame_count % 100 == 0:
-            print(f"Frames processados: {frame_count}")
-        
-        # Verificar tecla ESC para sair
-        if cv.waitKey(1) & 0xFF == 27:
-            print("Processamento interrompido pelo usuário.")
-            break
-    
-    # Liberar recursos
-    cap.release()
-    out.release()
-    cv.destroyAllWindows()
-    
-    print(f"Processamento concluído. Total de frames: {frame_count}")
-    print(f"Vídeo salvo em: {output_path}")

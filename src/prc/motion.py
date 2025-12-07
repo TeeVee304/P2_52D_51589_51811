@@ -25,10 +25,8 @@ class MotionDetector:
         self.roi_polygon = roi_polygon
         self._roi_mask = None
         
-        # Configurar kernel morfológico
-        self._kernel = cv.getStructuringElement(cv.MORPH_ELLIPSE, (5, 5))
+        self._kernel = cv.getStructuringElement(cv.MORPH_ELLIPSE, (5, 5)) # Configurar kernel morfológico
         
-        # Inicializar máscara ROI se polígono fornecido
         if roi_polygon is not None:
             self._create_roi_mask()
     
@@ -39,33 +37,27 @@ class MotionDetector:
         self._roi_mask = np.zeros((h, w), dtype=np.uint8)
         cv.fillPoly(self._roi_mask, [self.roi_polygon], 255)
     
-    def subtract_background(self, frame: np.ndarray) -> np.ndarray:
+    def subtract_background(self, frame):
         """
         Subtrai o fundo do frame atual.
-        
         Args:
-            frame: Frame atual (BGR).
+            frame (np.ndarray) : Frame atual (BGR).
         Returns:
-            Diferença absoluta em escala de cinza.
+            np.ndarray : Diferença absoluta em escala de cinza.
         """
         diff = cv.absdiff(frame, self.background)
         gray = cv.cvtColor(diff, cv.COLOR_BGR2GRAY)
         
         return gray
     
-    def apply_roi_mask(self, image: np.ndarray) -> np.ndarray:
+    def apply_roi_mask(self, image):
         """
         Aplica máscara de ROI à imagem.
-        
         Args:
-            image: Imagem de entrada.
+            image (np.ndarray) : Imagem de entrada.
         Returns:
-            Imagem com ROI aplicada.
-        """
-        if self._roi_mask is None:
-            return image
-        
-        # Garantir que a máscara tem as mesmas dimensões
+            np.ndarray : Imagem filtrada pela ROI.
+        """        
         if len(image.shape) == 3:
             # Para imagens coloridas, aplicar máscara a cada canal
             masked = cv.bitwise_and(image, image, mask=self._roi_mask)
@@ -75,49 +67,29 @@ class MotionDetector:
         
         return masked
     
-    def threshold_image(self, image: np.ndarray, 
-                       threshold: Optional[int] = None,
-                       method: str = 'binary') -> np.ndarray:
+    def threshold_image(self, image, threshold = None):
         """
-        Aplica limiarização à imagem.
-        
+        Binariza uma imagem com base num limiar.
         Args:
-            image: Imagem de entrada (escala de cinza).
-            threshold: Valor do limiar (usa self.threshold se None).
-            method: Método de limiarização ('binary', 'otsu', 'adaptive').
-            
+            image (np.ndarray) : Imagem de entrada (greyscale).
+            threshold (int) : Valor do limiar (usa 'self.threshold' se None).
         Returns:
-            Imagem binarizada.
+            np.ndarray : Imagem binarizada.
         """
         if threshold is None:
             threshold = self.threshold
-            
-        if method == 'binary':
-            _, binary = cv.threshold(image, threshold, 255, cv.THRESH_BINARY)
-        elif method == 'otsu':
-            # Limiarização de Otsu (automática)
-            _, binary = cv.threshold(image, 0, 255, cv.THRESH_BINARY + cv.THRESH_OTSU)
-        elif method == 'adaptive':
-            # Limiarização adaptativa
-            binary = cv.adaptiveThreshold(image, 255, 
-                                         cv.ADAPTIVE_THRESH_GAUSSIAN_C,
-                                         cv.THRESH_BINARY, 11, 2)
-        else:
-            raise ValueError(f"Método '{method}' não suportado.")
-            
+
+        _, binary = cv.threshold(image, 0, 255, cv.THRESH_BINARY + cv.THRESH_OTSU)
         return binary
     
-    def apply_morphology(self, binary: np.ndarray, 
-                        operations: List[str] = None) -> np.ndarray:
+    def apply_morphology(self, binary, operations):
         """
         Aplica operações morfológicas à imagem binarizada.
-        
         Args:
-            binary: Imagem binarizada.
-            operations: Lista de operações a aplicar.
-            
+            binary (np.ndarray) : Imagem binarizada.
+            operations (List[str]) : Lista de operações a aplicar.
         Returns:
-            Imagem processada.
+            np.ndarray : Imagem processada.
         """
         if operations is None:
             operations = ['close', 'open']
@@ -140,25 +112,20 @@ class MotionDetector:
         
         return processed
     
-    def find_contours(self, binary: np.ndarray, 
-                     min_area: Optional[int] = None) -> List[np.ndarray]:
+    def find_contours(self, binary, min_area):
         """
         Encontra contornos na imagem binarizada.
-        
         Args:
-            binary: Imagem binarizada.
-            min_area: Área mínima para filtrar contornos.
-            
+            binary (np.ndarray) : Imagem binarizada.
+            min_area (int): Área mínima para filtrar contornos.
         Returns:
-            Lista de contornos válidos.
+            List[np.ndarray] : Lista de contornos válidos.
         """
         if min_area is None:
             min_area = self.min_area
             
-        # Encontrar todos os contornos
         contours, _ = cv.findContours(binary, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
         
-        # Filtrar por área mínima
         valid_contours = []
         for cnt in contours:
             area = cv.contourArea(cnt)
@@ -167,15 +134,15 @@ class MotionDetector:
         
         return valid_contours
     
-    def get_bounding_boxes(self, contours: List[np.ndarray]) -> List[Tuple[int, int, int, int]]:
+    def get_bounding_boxes(self, contours):
         """
         Extrai bounding boxes dos contornos.
         
         Args:
-            contours: Lista de contornos.
+            contours (List[np.ndarray]) : Lista de contornos.
             
         Returns:
-            Lista de bounding boxes (x, y, largura, altura).
+            List[Tuple[int, int, int, int]] : Lista de bounding boxes (x, y, largura, altura).
         """
         bboxes = []
         for cnt in contours:
@@ -184,15 +151,15 @@ class MotionDetector:
         
         return bboxes
     
-    def detect_motion_regions(self, frame: np.ndarray) -> Dict[str, Any]:
+    def detect_motion_regions(self, frame):
         """
         Pipeline completo de detecção de regiões de movimento.
+        Inclui melhorias para detetar carros pequenos (distantes).
         
         Args:
-            frame: Frame atual.
-            
+            frame (np.ndarray) : Frame atual.
         Returns:
-            Dicionário com resultados do processamento.
+            Dict[str, Any] : Dicionário com resultados do processamento.
         """
         results = {}
         
@@ -204,23 +171,46 @@ class MotionDetector:
         masked = self.apply_roi_mask(diff_gray)
         results['masked'] = masked
         
-        # 3. Limiarização
-        binary = self.threshold_image(masked, method='binary')
+        # 3. MELHORIA: Aplicar CLAHE para melhorar contraste em carros distantes
+        clahe = cv.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+        enhanced = clahe.apply(masked)
+        results['enhanced'] = enhanced
+        
+        # 4. MELHORIA: Limiarização adaptativa (melhor para variações de tamanho/iluminação)
+        binary = cv.adaptiveThreshold(
+            enhanced, 
+            255, 
+            cv.ADAPTIVE_THRESH_GAUSSIAN_C, 
+            cv.THRESH_BINARY, 
+            11,  # Tamanho do bloco
+            2    # Constante subtraída
+        )
         results['binary'] = binary
         
-        # 4. Operações morfológicas
-        processed = self.apply_morphology(binary)
+        # 5. MELHORIA: Operações morfológicas otimizadas para carros pequenos
+        # 5.1 Primeiro: dilatar levemente para juntar regiões fragmentadas
+        kernel_dilate = cv.getStructuringElement(cv.MORPH_ELLIPSE, (3, 3))
+        dilated = cv.dilate(binary, kernel_dilate, iterations=1)
+        
+        # 5.2 Segundo: fechamento para preencher buracos em carros maiores
+        kernel_close = cv.getStructuringElement(cv.MORPH_ELLIPSE, (5, 5))
+        closed = cv.morphologyEx(dilated, cv.MORPH_CLOSE, kernel_close)
+        
+        # 5.3 Terceiro: abertura leve para remover ruído pequeno
+        kernel_open = cv.getStructuringElement(cv.MORPH_ELLIPSE, (3, 3))
+        processed = cv.morphologyEx(closed, cv.MORPH_OPEN, kernel_open, iterations=1)
+        
         results['processed'] = processed
         
-        # 5. Encontrar contornos
+        # 6. Encontrar contornos
         contours = self.find_contours(processed)
         results['contours'] = contours
         
-        # 6. Extrair bounding boxes
+        # 7. Extrair bounding boxes
         bboxes = self.get_bounding_boxes(contours)
         results['bboxes'] = bboxes
         
-        # 7. Calcular centróides
+        # 8. Calcular centróides
         centroids = []
         for cnt in contours:
             M = cv.moments(cnt)
@@ -231,18 +221,43 @@ class MotionDetector:
         
         results['centroids'] = centroids
         
+        # 9. MELHORIA: Calcular áreas para diagnóstico
+        areas = [cv.contourArea(cnt) for cnt in contours]
+        results['areas'] = areas
+        
+        # 10. MELHORIA: Filtrar por razão de aspecto (carros são mais largos que altos)
+        filtered_bboxes = []
+        filtered_contours = []
+        filtered_centroids = []
+        
+        for i, (bbox, cnt, centroid) in enumerate(zip(bboxes, contours, centroids)):
+            x, y, w, h = bbox
+            
+            # Razão de aspecto típica de carros (pelo menos 1.2 vezes mais largo que alto)
+            aspect_ratio = w / h if h > 0 else 0
+            
+            # Filtrar por área mínima E razão de aspecto razoável
+            if areas[i] >= self.min_area and aspect_ratio >= 0.8:  # Limite mais flexível
+                filtered_bboxes.append(bbox)
+                filtered_contours.append(cnt)
+                filtered_centroids.append(centroid)
+        
+        # Atualizar resultados filtrados
+        results['bboxes'] = filtered_bboxes
+        results['contours'] = filtered_contours
+        results['centroids'] = filtered_centroids
+        results['aspect_ratios'] = [w/h for x,y,w,h in filtered_bboxes if h > 0]
+        
         return results
     
     def visualize_detection(self, frame: np.ndarray, results: Dict[str, Any]) -> np.ndarray:
         """
         Visualiza os resultados da detecção no frame original.
-        
         Args:
-            frame: Frame original.
-            results: Dicionário com resultados do processamento.
-            
+            frame (np.ndarray) : Frame original.
+            results (Dict[str, Any]) : Dicionário com resultados do processamento.
         Returns:
-            Frame com anotações.
+            np.ndarray : Frame com anotações.
         """
         annotated = frame.copy()
         

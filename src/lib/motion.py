@@ -14,7 +14,7 @@ class MotionDetector:
             self._roi_mask = np.zeros((h, w), dtype=np.uint8)
             cv.fillPoly(self._roi_mask, [roi_polygon], 255)
 
-    def subtract_background(self, frame):
+    def _subtract_background(self, frame):
         """
         Subtrai o fundo (background) de um frame, aplicando uma máscara de ROI caso seja fornecida.
         Args:
@@ -28,7 +28,7 @@ class MotionDetector:
             gray = cv.bitwise_and(gray, self._roi_mask)
         return gray
 
-    def threshold_image(self, gray):
+    def _threshold_image(self, gray):
         """
         Converte uma imagem grayscale para uma imagem binária.
         Args:
@@ -39,7 +39,7 @@ class MotionDetector:
         _, binary = cv.threshold(gray, self.threshold, 255, cv.THRESH_BINARY)
         return binary
 
-    def find_contours(self, binary):
+    def _find_contours(self, binary):
         """
         Encontra contornos em uma imagem binária e retorna apenas os que tem área maior ou igual a um valor mínimo.
         Args:
@@ -51,7 +51,7 @@ class MotionDetector:
         valid_contours = [cnt for cnt in contours if cv.contourArea(cnt) >= self.min_area]
         return valid_contours
 
-    def get_bounding_boxes(self, contours):
+    def _get_bounding_boxes(self, contours):
         """
         Converte contornos em bounding boxes.
         Args:
@@ -66,8 +66,8 @@ class MotionDetector:
         Detecta regiões de movimento em um único frame.
         Retorna contornos e bounding boxes.
         """
-        gray = self.subtract_background(frame)
-        binary = self.threshold_image(gray)
-        contours = self.find_contours(binary)
-        bboxes = self.get_bounding_boxes(contours)
+        gray = self._subtract_background(frame)
+        binary = self._threshold_image(gray)
+        contours = self._find_contours(binary)
+        bboxes = self._get_bounding_boxes(contours)
         return {'contours': contours, 'bboxes': bboxes, 'binary': binary}

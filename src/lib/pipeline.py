@@ -4,15 +4,21 @@ from lib.tracker import VehicleTracker
 import cv2 as cv
 import numpy as np
 from typing import Tuple, Optional
-import logging
 
 class Pipeline:
-    def __init__(self, input_path: str, output_path: str, roi_polygon: Optional[np.ndarray]=None,
-                 scale_m_per_px: float = 0.02, min_area: int = 500):
+    def __init__(self, input_path, output_path, roi_polygon = None, m_per_px = 0.02, min_area = 500):
+        """
+        Args:
+            input_path (str): Diretoria do ficheiro de vídeo.
+            output_path (str): Diretoria do ficheiro de vídeo de saída.
+            roi_polygon (Optional[np.ndarray]): Polígono que define a ROI. Se None, a ROI não será utilizada.
+            scale_m_per_px (float): Escala de "metros por pixel" do vídeo. Defaults to 0.02.
+            min_area (int): Área mínima de um objeto para ser considerado um carro. Defaults to 500.
+        """
         self.input_path = input_path
         self.output_path = output_path
         self.roi_polygon = roi_polygon
-        self.scale_m_per_px = scale_m_per_px
+        self.m_per_px = m_per_px
         self.min_area = min_area
 
         self.background = None
@@ -84,7 +90,7 @@ class Pipeline:
             else:
                 detections_full = detections
 
-            self.tracker.update(detections_full, frame_id, fps, self.scale_m_per_px)
+            self.tracker.update(detections_full, frame_id, fps, self.m_per_px)
 
             annotated = self.tracker.draw_tracks(frame, offset=(0,0))
 

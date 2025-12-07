@@ -2,7 +2,7 @@ import cv2 as cv
 import numpy as np
 
 class MotionDetector:
-    def __init__(self, background, threshold=30, min_area=500, roi_polygon=None):
+    def __init__(self, background, threshold=30, min_area=500, roi_polygon = None):
         self.background = background
         self.threshold = threshold
         self.min_area = min_area

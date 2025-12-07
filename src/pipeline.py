@@ -1,6 +1,6 @@
 import numpy as np
 import cv2 as cv
-from prc.background import avg_frame
+from prc.background import background
 from prc.motion import MotionDetector
 
 BIN_THRESHOLD = 30 # Limiar para binarização
@@ -15,7 +15,7 @@ def detect_cars(input, output, roi_polygon):
         output: Caminho para o ficheiro de vídeo de saída (mp4).
         roi_polygon: Array Nx2 com vértices do polígono da ROI.
     """
-    background = avg_frame(input) # Calcular fundo médio
+    background = background(input) # Calcular fundo médio
     
     detector = MotionDetector(
         background=background,

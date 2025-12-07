@@ -1,79 +1,45 @@
-"""
-Módulo para detecção de movimento e processamento de regiões ativas.
-Inclui subtração de fundo, limiarização e operações morfológicas.
-"""
 import cv2 as cv
 import numpy as np
-import matplotlib.pyplot as plt
 
 class MotionDetector:
-    """
-    Detecção dentro de ROI com recorte prévio e pipeline parametrizável.
-    Args:
-        background (np.ndarray): Frame de fundo para subtração.
-        min_area (int): Área mínima para considerar um contorno como movimento.
-        kernel_size (Tuple[int,int]): Tamanho do kernel para operações morfológicas.
-    Returns:
-        List[Tuple[int,int,int,int]]: Lista de bounding boxes (x,y,w,h) das regiões detectadas.
-    """
-    def __init__(self, background, min_area = 500, kernel_size = (3,3)):
-        """
-        Args:
-            background (np.ndarray): Frame de fundo para subtração.
-            min_area (int, optional): Área mínima para considerar um contorno como movimento. Defaults to 500.
-            kernel_size (Tuple[int,int], optional): Tamanho do kernel para operações morfológicas. Defaults to (3,3).
-        """
+    def __init__(self, background, threshold=30, min_area=500, roi_polygon=None):
         self.background = background
+        self.threshold = threshold
         self.min_area = min_area
-        self.kernel = cv.getStructuringElement(cv.MORPH_ELLIPSE, kernel_size)
+        self.roi_polygon = roi_polygon
+        self._roi_mask = None
 
-    def subtract_background(self, frame: np.ndarray) -> np.ndarray:
-        """
-        Subtrai o fundo de um frame, retornando a imagem em tons de cinza.
-        Args:
-            frame (np.ndarray): Frame de entrada em BGR.
-        Returns:
-            np.ndarray: Imagem em tons de cinza resultante da subtração do fundo.
-        """
-        # Assume frames BGR
+        if roi_polygon is not None:
+            h, w = background.shape[:2]
+            self._roi_mask = np.zeros((h, w), dtype=np.uint8)
+            cv.fillPoly(self._roi_mask, [roi_polygon], 255)
+
+    def subtract_background(self, frame):
         diff = cv.absdiff(frame, self.background)
         gray = cv.cvtColor(diff, cv.COLOR_BGR2GRAY)
+        if self._roi_mask is not None:
+            gray = cv.bitwise_and(gray, self._roi_mask)
         return gray
 
-    def detect(self, frame: np.ndarray, roi_mask = None):
+    def threshold_image(self, gray):
+        _, binary = cv.threshold(gray, self.threshold, 255, cv.THRESH_BINARY)
+        return binary
+
+    def find_contours(self, binary):
+        contours, _ = cv.findContours(binary, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
+        valid_contours = [cnt for cnt in contours if cv.contourArea(cnt) >= self.min_area]
+        return valid_contours
+
+    def get_bounding_boxes(self, contours):
+        return [cv.boundingRect(cnt) for cnt in contours]
+
+    def detect(self, frame):
         """
-        Detecta movimento dentro de uma região de interesse (ROI) com recorte prévio e pipeline parametrizável.
-        Args:
-            frame (np.ndarray): Frame de entrada em BGR.
-            roi_mask (Optional[np.ndarray]): Máscara de região de interesse (opcional).
-        Returns:
-            List[Tuple[int,int,int,int]]: Lista de bounding boxes (x,y,w,h) das regiões detectadas.
+        Detecta regiões de movimento em um único frame.
+        Retorna contornos e bounding boxes.
         """
         gray = self.subtract_background(frame)
-
-        # CLAHE
-        clahe = cv.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
-        enhanced = clahe.apply(gray)
-
-        # adaptive threshold
-        binary = cv.adaptiveThreshold(enhanced, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C,
-                                      cv.THRESH_BINARY, 11, 2)
-
-        # morphology
-        binary = cv.morphologyEx(binary, cv.MORPH_CLOSE, self.kernel, iterations=2)
-        binary = cv.morphologyEx(binary, cv.MORPH_OPEN, self.kernel, iterations=1)
-
-        # If roi_mask provided (for cropped frames mask is optional)
-        if roi_mask is not None:
-            binary = cv.bitwise_and(binary, roi_mask)
-
-        # contours
-        contours, _ = cv.findContours(binary, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
-        bboxes = []
-        for cnt in contours:
-            area = cv.contourArea(cnt)
-            if area < self.min_area:
-                continue
-            x,y,w,h = cv.boundingRect(cnt)
-            bboxes.append((x,y,w,h))
-        return bboxes, binary
+        binary = self.threshold_image(gray)
+        contours = self.find_contours(binary)
+        bboxes = self.get_bounding_boxes(contours)
+        return {'contours': contours, 'bboxes': bboxes, 'binary': binary}

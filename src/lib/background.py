@@ -6,7 +6,6 @@ MAX_FRAMES = 300
 def background(video_path):
     """
     Calcula o fundo (background) de um vídeo com base na média de todos os frames de um vídeo.
-
     Args:
         video_path (str): Diretoria do ficheiro de vídeo.
     Returns:
@@ -30,6 +29,5 @@ def background(video_path):
         count += 1
 
     cap.release()
-
     avg /= count
     return avg.astype(np.uint8)
